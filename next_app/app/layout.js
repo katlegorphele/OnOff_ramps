@@ -1,7 +1,7 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThirdwebProvider } from "thirdweb/react";
-// import { client } from "./client";
+
 
 
 const geistSans = Geist({
@@ -25,8 +25,9 @@ export default function RootLayout({ children }) {
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-
+        <ThirdwebProvider>
         {children}
+        </ThirdwebProvider>
 
       </body>
     </html>

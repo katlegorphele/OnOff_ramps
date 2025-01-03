@@ -1,29 +1,42 @@
 'use client'
 
 import React, { useEffect, useState } from "react";
-import { ethers } from "ethers";
+import {
+  defineChain,
+  getContract,
+  prepareContractCall,
+  readContract,
+  sendTransaction,
+} from "thirdweb";
+import { thirdwebClient } from "@/app/client";
+import {Account} from 'thirdweb/wallets'
 
-import { contractABI, contractAddress, contractUzarAbi, contractAddressUzar } from "../utils/constants";
+import { contractAddress, contractAddressUzar } from "../utils/constants";
 
 export const TransactionContext = React.createContext();
 
-const { ethereum } = window;
+const lisk_sepolia = defineChain(4202);
 
-const createEthereumContract = () => {
-  const provider = new ethers.providers.Web3Provider(ethereum);
-  const signer = provider.getSigner();
-  const transactionsContract = new ethers.Contract(contractAddress, contractABI, signer);
 
-  return transactionsContract;
-};
+const transactionContract = getContract({
+  client: thirdwebClient,
+  chain: lisk_sepolia,
+  address: contractAddress,
+});
 
-const createEthereumContractUZAR = () => {
-  const provider = new ethers.providers.Web3Provider(ethereum);
-  const signer = provider.getSigner();
-  const UZARContract = new ethers.Contract(contractAddressUzar, contractUzarAbi, signer);
+const uzarContract = getContract({
+  client: thirdwebClient,
+  chain: lisk_sepolia,
+  address: contractAddressUzar,
+});
 
-  return UZARContract;
-};
+// const createEthereumContractUZAR = () => {
+//   const provider = new ethers.providers.Web3Provider(ethereum);
+//   const signer = provider.getSigner();
+//   const UZARContract = new ethers.Contract(contractAddressUzar, contractUzarAbi, signer);
+
+//   return UZARContract;
+// };
 
 export const TransactionsProvider = ({ children }) => {
   const [formData, setformData] = useState({ addressTo: "", amount: "", walletId: "", referenceId: "" });
@@ -106,16 +119,7 @@ export const TransactionsProvider = ({ children }) => {
   };
 
   const connectWallet = async () => {
-    try {
-      if (!ethereum) return alert("Please install MetaMask.");
-
-      const accounts = await ethereum.request({ method: "eth_requestAccounts" });
-      setCurrentAccount(accounts[0]);
-      await fetchBalance(accounts[0]);
-    } catch (error) {
-      console.log(error);
-      throw new Error("No ethereum object");
-    }
+    
   };
 
   const sendTransaction = async () => {
