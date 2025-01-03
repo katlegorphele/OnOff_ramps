@@ -8,6 +8,7 @@ export const TransactionContext = React.createContext();
 const { ethereum } = window;
 
 const createEthereumContract = () => {
+  // replace with thirdweb getContract
   const provider = new ethers.providers.Web3Provider(ethereum);
   const signer = provider.getSigner();
   const transactionsContract = new ethers.Contract(contractAddress, contractABI, signer);
@@ -16,6 +17,7 @@ const createEthereumContract = () => {
 };
 
 const createEthereumContractUZAR = () => {
+  // replace with thirdweb getContract
   const provider = new ethers.providers.Web3Provider(ethereum);
   const signer = provider.getSigner();
   const UZARContract = new ethers.Contract(contractAddressUzar, contractUzarAbi, signer);

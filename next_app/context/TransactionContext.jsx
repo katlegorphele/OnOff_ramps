@@ -7,7 +7,7 @@ import { contractABI, contractAddress, contractUzarAbi, contractAddressUzar } fr
 
 export const TransactionContext = React.createContext();
 
-const { ethereum } = window.ethereum;
+const { ethereum } = window;
 
 const createEthereumContract = () => {
   const provider = new ethers.providers.Web3Provider(ethereum);
@@ -163,7 +163,15 @@ export const TransactionsProvider = ({ children }) => {
           transactionHash: transactionHash.hash,
         };
   
-        const response = await fetch("https://sandbox-api.kotanipay.io/api/v3/withdraw/v2/bank", {
+        // const response = await fetch("https://sandbox-api.kotanipay.io/api/v3/withdraw/v2/bank", {
+        //   method: "POST",
+        //   headers: {
+        //     "Content-Type": "application/json",
+        //     Accept: "application/json",
+        //   },
+        //   body: JSON.stringify(apiData),
+        // });
+        const response = await fetch("/api/buy-token", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
