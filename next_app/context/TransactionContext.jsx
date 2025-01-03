@@ -9,14 +9,14 @@ import {
   sendTransaction,
 } from "thirdweb";
 import { thirdwebClient } from "@/app/client";
-import {Account} from 'thirdweb/wallets'
+import { Account } from 'thirdweb/wallets';
+import Web3 from "web3";
 
-import { contractAddress, contractAddressUzar } from "../utils/constants";
+import { contractABI, contractAddress, contractUzarAbi, contractAddressUzar } from "../utils/constants";
 
 export const TransactionContext = React.createContext();
 
 const lisk_sepolia = defineChain(4202);
-
 
 const transactionContract = getContract({
   client: thirdwebClient,
@@ -29,14 +29,6 @@ const uzarContract = getContract({
   chain: lisk_sepolia,
   address: contractAddressUzar,
 });
-
-// const createEthereumContractUZAR = () => {
-//   const provider = new ethers.providers.Web3Provider(ethereum);
-//   const signer = provider.getSigner();
-//   const UZARContract = new ethers.Contract(contractAddressUzar, contractUzarAbi, signer);
-
-//   return UZARContract;
-// };
 
 export const TransactionsProvider = ({ children }) => {
   const [formData, setformData] = useState({ addressTo: "", amount: "", walletId: "", referenceId: "" });
@@ -52,51 +44,36 @@ export const TransactionsProvider = ({ children }) => {
 
   const getAllTransactions = async () => {
     try {
-      if (ethereum) {
-        const transactionsContract = createEthereumContract();
-        const availableTransactions = await transactionsContract.getAllTransactions();
+      const availableTransactions = await readContract({
+        contract: transactionContract,
+        method: "function getAllTransactions() public view returns (Transaction[] memory)",
+        params: [],
+      });
 
-        const structuredTransactions = availableTransactions.map((transaction) => ({
-          addressTo: transaction.receiver,
-          addressFrom: transaction.sender,
-          timestamp: new Date(transaction.timestamp.toNumber() * 1000).toLocaleString(),
-          referenceId: transaction.referenceId,
-          walletId: transaction.walletId,
-          amount: parseInt(transaction.amount._hex) / 10 ** 18,
-        }));
+      const structuredTransactions = availableTransactions.map((transaction) => ({
+        addressTo: transaction.receiver,
+        addressFrom: transaction.sender,
+        timestamp: new Date(Number(transaction.timestamp) * 1000).toLocaleString(),
+        referenceId: transaction.referenceId,
+        walletId: transaction.walletId,
+        amount: Number(Web3.utils.fromWei(transaction.amount.toString(), "ether")),
+      }));
 
-        setTransactions(structuredTransactions);
-      } else {
-        console.log("Ethereum is not present");
-      }
+      setTransactions(structuredTransactions);
     } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const checkIfWalletIsConnect = async () => {
-    try {
-      if (!ethereum) return alert("Please install MetaMask.");
-
-      const accounts = await ethereum.request({ method: "eth_accounts" });
-
-      if (accounts.length) {
-        setCurrentAccount(accounts[0]);
-        getAllTransactions();
-        await fetchBalance(accounts[0]);
-      } else {
-        console.log("No accounts found");
-      }
-    } catch (error) {
-      console.log(error);
+      console.log("Error fetching transactions:", error);
     }
   };
 
   const fetchBalance = async (account) => {
     try {
-      const UZARContract = createEthereumContractUZAR();
-      const rawBalance = await UZARContract.balanceOf(account);
-      const formattedBalance = ethers.utils.formatEther(rawBalance);
+      const rawBalance = await readContract({
+        contract: uzarContract,
+        method: "function balanceOf(address) view returns (uint256)",
+        params: [account],
+      });
+
+      const formattedBalance = Web3.utils.fromWei(rawBalance.toString(), "ether");
       setBalance(formattedBalance);
       console.log("Balance:", formattedBalance);
     } catch (error) {
@@ -106,105 +83,98 @@ export const TransactionsProvider = ({ children }) => {
 
   const checkIfTransactionsExists = async () => {
     try {
-      if (ethereum) {
-        const transactionsContract = createEthereumContract();
-        const currentTransactionCount = await transactionsContract.getTransactionCount();
+      const currentTransactionCount = await readContract({
+        contract: transactionContract,
+        method: "function getTransactionCount() view returns (uint256)",
+        params: [],
+      });
 
-        window.localStorage.setItem("transactionCount", currentTransactionCount);
-      }
+      window.localStorage.setItem("transactionCount", currentTransactionCount.toString());
     } catch (error) {
-      console.log(error);
-      throw new Error("No ethereum object");
+      console.log("Error checking transactions:", error);
     }
   };
 
-  const connectWallet = async () => {
-    
-  };
-
-  const sendTransaction = async () => {
+  const sendTransaction = async (account) => {
     try {
-      if (ethereum) {
-        const { addressTo, amount, walletId, referenceId } = formData;
-        const transactionsContract = createEthereumContract();
-        const UZARContract = createEthereumContractUZAR();
-        const parsedAmount = ethers.utils.parseEther(amount);
-  
-        // Check for allowance
-        const allowance = await UZARContract.allowance(currentAccount, contractAddress);
-  
-        if (allowance.lt(parsedAmount)) {
-          console.log("Insufficient allowance, requesting approval...");
-          const approveTx = await UZARContract.approve(contractAddress, parsedAmount);
-          console.log(`Approval transaction hash: ${approveTx.hash}`);
-          await approveTx.wait();
-          console.log("Approval granted.");
-        }
-  
-        // Initiate the transaction
-        const transactionHash = await transactionsContract.OnOffRamp(
-          addressTo,
-          parsedAmount,
-          referenceId,
-          walletId
-        );
-  
-        setIsLoading(true);
-        console.log(`Loading - ${transactionHash.hash}`);
-        await transactionHash.wait();
-        console.log(`Success - ${transactionHash.hash}`);
-        setIsLoading(false);
-  
-        const transactionsCount = await transactionsContract.getTransactionCount();
-        setTransactionCount(transactionsCount.toNumber());
-  
-        
-        const apiData = {
-          addressTo,
-          amount,
-          walletId,
-          referenceId,
-          transactionHash: transactionHash.hash,
-        };
-  
-        // const response = await fetch("https://sandbox-api.kotanipay.io/api/v3/withdraw/v2/bank", {
-        //   method: "POST",
-        //   headers: {
-        //     "Content-Type": "application/json",
-        //     Accept: "application/json",
-        //   },
-        //   body: JSON.stringify(apiData),
-        // });
-        const response = await fetch("/api/buy-token", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify(apiData),
-        });
-  
-        const responseData = await response.json();
-  
-        if (response.ok) {
-          console.log("Data successfully sent to the API:", responseData);
-        } else {
-          console.error("Failed to send data to the API:", responseData);
-        }
+      const { addressTo, amount, walletId, referenceId } = formData;
+      const parsedAmount = Web3.utils.toWei(amount, "ether");
 
-        
+      // Check allowance
+      const allowance = await readContract({
+        contract: uzarContract,
+        method: "function allowance(address,address) view returns (uint256)",
+        params: [account.address, transactionContract.address],
+      });
+
+      if (BigInt(allowance) < BigInt(parsedAmount)) {
+        console.log("Insufficient allowance, requesting approval...");
+        const approveTransaction = prepareContractCall({
+          contract: uzarContract,
+          method: "function approve(address,uint256)",
+          params: [transactionContract.address, parsedAmount],
+        });
+
+        const approveTx = await sendTransaction({ transaction: approveTransaction, account });
+        console.log("Approval granted:", approveTx);
+      }
+
+      // Prepare and send the main transaction
+      const transaction = prepareContractCall({
+        contract: transactionContract,
+        method: "function OnOffRamp(address,uint256,string,string)",
+        params: [addressTo, parsedAmount, referenceId, walletId],
+      });
+
+      setIsLoading(true);
+      const tx = await sendTransaction({ transaction, account });
+      console.log("Transaction sent:", tx);
+      
+      // Wait for transaction confirmation
+      await tx.wait();
+      console.log("Transaction confirmed:", tx);
+      setIsLoading(false);
+
+      // Update transaction count
+      const newTransactionCount = await readContract({
+        contract: transactionContract,
+        method: "function getTransactionCount() view returns (uint256)",
+        params: [],
+      });
+      setTransactionCount(newTransactionCount.toString());
+
+      // Send data to API
+      const apiData = {
+        addressTo,
+        amount,
+        walletId,
+        referenceId,
+        transactionHash: tx.hash,
+      };
+
+      const response = await fetch("/api/buy-token", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(apiData),
+      });
+
+      const responseData = await response.json();
+      if (response.ok) {
+        console.log("Data successfully sent to the API:", responseData);
       } else {
-        console.log("No ethereum object");
+        console.error("Failed to send data to the API:", responseData);
       }
     } catch (error) {
-      console.log(error);
-      throw new Error("Error in sendTransaction function");
+      console.log("Error in sendTransaction:", error);
+      throw new Error("Transaction failed");
     }
   };
-  
 
   useEffect(() => {
-    checkIfWalletIsConnect();
+    getAllTransactions();
     checkIfTransactionsExists();
   }, [transactionCount]);
 
@@ -212,7 +182,6 @@ export const TransactionsProvider = ({ children }) => {
     <TransactionContext.Provider
       value={{
         transactionCount,
-        connectWallet,
         transactions,
         currentAccount,
         isLoading,
@@ -220,6 +189,7 @@ export const TransactionsProvider = ({ children }) => {
         handleChange,
         formData,
         balance,
+        fetchBalance,
       }}
     >
       {children}

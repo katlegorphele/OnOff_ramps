@@ -6,6 +6,19 @@ import { BsInfoCircle } from "react-icons/bs";
 import { TransactionContext } from "@/context/TransactionContext";
 import { shortenAddress } from "../../utils/shortenAddress";
 import Loader from "./Loader";
+import { useConnectModal } from "thirdweb/react";
+import { thirdwebClient } from "../client";
+
+function connectWallet() {
+
+  const {connect, isConnecting} = useConnectModal();
+  
+  async function handleConnect() {
+    const wallet = await connect({client})
+    console.log("Connected to", wallet)
+  }
+
+}
 
 
 const companyCommonStyles = "min-h-[70px] sm:px-0 px-2 sm:min-w-[120px] flex justify-center items-center border-[0.5px] border-gray-400 text-sm font-light text-white";
