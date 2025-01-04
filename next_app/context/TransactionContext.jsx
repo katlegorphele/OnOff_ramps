@@ -198,6 +198,7 @@ export const TransactionsProvider = ({ children }) => {
         formData,
         balance,
         fetchBalance,
+        setCurrentAccount,
       }}
     >
       {children}
