@@ -26,7 +26,7 @@ const Input = ({ placeholder, name, type, value, handleChange }) => (
 );
 
 const Welcome = () => {
-  const { currentAccount, connectWallet, handleChange, sendTransaction, formData, isLoading } = useContext(TransactionContext);
+  const { currentAccount, connectWallet, handleChange, _sendTransaction, formData, isLoading } = useContext(TransactionContext);
 
   const handleSubmit = (e) => {
     const { addressTo, amount, walletId, referenceId } = formData;
@@ -35,7 +35,7 @@ const Welcome = () => {
 
     if (!addressTo || !amount || !walletId || !referenceId) return;
 
-    sendTransaction();
+    _sendTransaction();
   };
 
   return (

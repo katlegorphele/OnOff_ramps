@@ -1,13 +1,13 @@
 
 import React, {useContext, useEffect} from 'react'
-import { createThirdwebClient, defineChain } from "thirdweb";
-import { ConnectButton, lightTheme, useActiveAccount, useWalletDetailsModal } from "thirdweb/react";
+import { defineChain } from "thirdweb";
+import { ConnectButton, lightTheme, useActiveAccount } from "thirdweb/react";
 import { thirdwebClient } from '../client';
 import { TransactionContext } from "@/context/TransactionContext";
 
 const ConnectWallet = () => {
     const userAddress = useActiveAccount();
-    const { currentAccount, setCurrentAccount } = useContext(TransactionContext);
+    const { setCurrentAccount } = useContext(TransactionContext);
 
     useEffect(() => {
         if (userAddress) {
@@ -37,7 +37,7 @@ const ConnectWallet = () => {
         }}
         client={thirdwebClient}
         accountAbstraction={{
-          chain: defineChain(1135),
+          chain: defineChain(4202),
           sponsorGas: true,
         }}
         connectModal={{
@@ -47,5 +47,4 @@ const ConnectWallet = () => {
       />
   )
 }
-
 export default ConnectWallet

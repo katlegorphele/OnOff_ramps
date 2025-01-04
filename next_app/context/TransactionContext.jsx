@@ -9,10 +9,12 @@ import {
   sendTransaction,
 } from "thirdweb";
 import { thirdwebClient } from "@/app/client";
-import { Account } from 'thirdweb/wallets';
+import { sepolia } from 'thirdweb/chains'
+
 import Web3 from "web3";
 
 import { contractABI, contractAddress, contractUzarAbi, contractAddressUzar } from "../utils/constants";
+import { useActiveAccount } from "thirdweb/react";
 
 export const TransactionContext = React.createContext();
 
@@ -40,11 +42,12 @@ export const TransactionsProvider = ({ children }) => {
   const [transactions, setTransactions] = useState([]);
   const [balance, setBalance] = useState("");
 
-  // USE EFFECT FOR transacionCount
   useEffect(() => {
     const transactionCount = window.localStorage.getItem("transactionCount");
     setTransactionCount(transactionCount);
   }, []);
+
+  const account = useActiveAccount();
 
   const handleChange = (e, name) => {
     setformData((prevState) => ({ ...prevState, [name]: e.target.value }));
@@ -73,12 +76,12 @@ export const TransactionsProvider = ({ children }) => {
     }
   };
 
-  const fetchBalance = async (account) => {
+  const fetchBalance = async () => {
     try {
       const rawBalance = await readContract({
         contract: uzarContract,
-        method: "function balanceOf(address) view returns (uint256)",
-        params: [account],
+        method: "balanceOf",
+        params: [currentAccount],
       });
 
       const formattedBalance = Web3.utils.fromWei(rawBalance.toString(), "ether");
@@ -93,7 +96,7 @@ export const TransactionsProvider = ({ children }) => {
     try {
       const currentTransactionCount = await readContract({
         contract: transactionContract,
-        method: "function getTransactionCount() view returns (uint256)",
+        method: "getTransactionCount",
         params: [],
       });
 
@@ -103,61 +106,54 @@ export const TransactionsProvider = ({ children }) => {
     }
   };
 
-  const sendTransaction = async (account) => {
+  const _sendTransaction = async () => {
     try {
+      setIsLoading(true);
       const { addressTo, amount, walletId, referenceId } = formData;
-      const parsedAmount = Web3.utils.toWei(amount, "ether");
+      const parsedAmount = Web3.utils.toWei(amount.toString(), "ether");
 
-      // Check allowance
+      // check for allowance
       const allowance = await readContract({
         contract: uzarContract,
-        method: "function allowance(address,address) view returns (uint256)",
-        params: [account.address, transactionContract.address],
+        method: "allowance",
+        params: [currentAccount, contractAddress],
       });
 
-      if (BigInt(allowance) < BigInt(parsedAmount)) {
-        console.log("Insufficient allowance, requesting approval...");
-        const approveTransaction = prepareContractCall({
+      console.log("Allowance:", allowance);
+
+      if (Number(allowance) < Number(parsedAmount)) {
+        const approval = prepareContractCall({
           contract: uzarContract,
-          method: "function approve(address,uint256)",
-          params: [transactionContract.address, parsedAmount],
+          method: "approve",
+          params: [contractAddress, parsedAmount],
         });
 
-        const approveTx = await sendTransaction({ transaction: approveTransaction, account });
-        console.log("Approval granted:", approveTx);
+        console.log("Approval:", approval);
+
+        await sendTransaction({
+          transaction: approval,
+          account: account,
+        });
       }
 
-      // Prepare and send the main transaction
-      const transaction = prepareContractCall({
+      // prepare main transaction
+      const transactionMain = prepareContractCall({
         contract: transactionContract,
-        method: "function OnOffRamp(address,uint256,string,string)",
-        params: [addressTo, parsedAmount, referenceId, walletId],
+        method: "OnOffRamp",
+        params: [addressTo, parsedAmount, walletId, referenceId],
       });
 
-      setIsLoading(true);
-      const tx = await sendTransaction({ transaction, account });
-      console.log("Transaction sent:", tx);
-      
-      // Wait for transaction confirmation
-      await tx.wait();
-      console.log("Transaction confirmed:", tx);
-      setIsLoading(false);
-
-      // Update transaction count
-      const newTransactionCount = await readContract({
-        contract: transactionContract,
-        method: "function getTransactionCount() view returns (uint256)",
-        params: [],
+      const { transactionHash } = await sendTransaction({
+        transaction: transactionMain,
+        account: account,
       });
-      setTransactionCount(newTransactionCount.toString());
 
-      // Send data to API
       const apiData = {
         addressTo,
         amount,
         walletId,
         referenceId,
-        transactionHash: tx.hash,
+        transactionHash: transactionHash,
       };
 
       const response = await fetch("/api/buy-token", {
@@ -175,10 +171,15 @@ export const TransactionsProvider = ({ children }) => {
       } else {
         console.error("Failed to send data to the API:", responseData);
       }
+      setIsLoading(false);
+
     } catch (error) {
-      console.log("Error in sendTransaction:", error);
-      throw new Error("Transaction failed");
+      console.log("Error sending transaction:", error);
+      setIsLoading(false);
     }
+
+    setIsLoading(false);
+
   };
 
   useEffect(() => {
@@ -193,7 +194,7 @@ export const TransactionsProvider = ({ children }) => {
         transactions,
         currentAccount,
         isLoading,
-        sendTransaction,
+        _sendTransaction,
         handleChange,
         formData,
         balance,
