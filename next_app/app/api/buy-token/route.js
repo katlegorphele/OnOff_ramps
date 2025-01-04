@@ -7,8 +7,8 @@ const transporter = nodemailer.createTransport({
     port: 587,
     secure: false,
     auth: {
-        user: process.env.NEXT_PUBLIC_BURNER_USERNAME,
-        pass: process.env.NEXT_PUBLIC_BURNER_PASSWORD
+        user: process.env.NEXT_PUBLIC_EMAIL,
+        pass: process.env.NEXT_PUBLIC_PASSWORD
     }
 });
 
@@ -23,7 +23,7 @@ async function sendTransactionEmail(
 
     try {
         await transporter.sendMail({
-            from: process.env.NEXT_PUBLIC_BURNER_USERNAME,
+            from: process.env.NEXT_PUBLIC_EMAIL,
             to: 'katlegophele95@gmail.com',
             subject: 'uZar Purchase Confirmation',
             text: `

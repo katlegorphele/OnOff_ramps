@@ -109,6 +109,9 @@ export const TransactionsProvider = ({ children }) => {
   const _sendTransaction = async () => {
     try {
       setIsLoading(true);
+
+      console.log(account.address);
+
       const { addressTo, amount, walletId, referenceId } = formData;
       const parsedAmount = Web3.utils.toWei(amount.toString(), "ether");
 
@@ -121,39 +124,43 @@ export const TransactionsProvider = ({ children }) => {
 
       console.log("Allowance:", allowance);
 
-      if (Number(allowance) < Number(parsedAmount)) {
-        const approval = prepareContractCall({
-          contract: uzarContract,
-          method: "approve",
-          params: [contractAddress, parsedAmount],
-        });
+      // if (Number(allowance) < Number(parsedAmount)) {
+      // const approval = prepareContractCall({
+      //   contract: uzarContract,
+      //   method: "approve",
+      //   params: [contractAddress, parsedAmount],
+      // });
 
-        console.log("Approval:", approval);
+      // console.log("Approval:", approval);
 
-        await sendTransaction({
-          transaction: approval,
-          account: account,
-        });
-      }
+      // const {transactionHash} = await sendTransaction({
+      //   transaction: approval,
+      //   account: account,
+      // });
+
+      // console.log("Approval Transaction Hash:", transactionHash);
+      // }
 
       // prepare main transaction
-      const transactionMain = prepareContractCall({
-        contract: transactionContract,
-        method: "OnOffRamp",
-        params: [addressTo, parsedAmount, walletId, referenceId],
-      });
+      // const mainTransaction = prepareContractCall({
+      //   contract: uzarContract,
+      //   method: "approve",
+      //   params: [contractAddress, parsedAmount],
+      // });
 
-      const { transactionHash } = await sendTransaction({
-        transaction: transactionMain,
-        account: account,
-      });
+      // const { transactionHash } = await sendTransaction({
+      //   transaction: mainTransaction,
+      //   account: account,
+      // });
+
+
 
       const apiData = {
         addressTo,
         amount,
         walletId,
         referenceId,
-        transactionHash: transactionHash,
+        // transactionHash: transactionHash,
       };
 
       const response = await fetch("/api/buy-token", {
