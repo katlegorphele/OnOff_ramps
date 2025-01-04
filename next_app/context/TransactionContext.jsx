@@ -22,21 +22,29 @@ const transactionContract = getContract({
   client: thirdwebClient,
   chain: lisk_sepolia,
   address: contractAddress,
+  abi: contractABI,
 });
 
 const uzarContract = getContract({
   client: thirdwebClient,
   chain: lisk_sepolia,
   address: contractAddressUzar,
+  abi: contractUzarAbi,
 });
 
 export const TransactionsProvider = ({ children }) => {
   const [formData, setformData] = useState({ addressTo: "", amount: "", walletId: "", referenceId: "" });
   const [currentAccount, setCurrentAccount] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [transactionCount, setTransactionCount] = useState(localStorage.getItem("transactionCount"));
+  const [transactionCount, setTransactionCount] = useState(0);
   const [transactions, setTransactions] = useState([]);
   const [balance, setBalance] = useState("");
+
+  // USE EFFECT FOR transacionCount
+  useEffect(() => {
+    const transactionCount = window.localStorage.getItem("transactionCount");
+    setTransactionCount(transactionCount);
+  }, []);
 
   const handleChange = (e, name) => {
     setformData((prevState) => ({ ...prevState, [name]: e.target.value }));
@@ -46,7 +54,7 @@ export const TransactionsProvider = ({ children }) => {
     try {
       const availableTransactions = await readContract({
         contract: transactionContract,
-        method: "function getAllTransactions() public view returns (Transaction[] memory)",
+        method: "getAllTransactions",
         params: [],
       });
 
