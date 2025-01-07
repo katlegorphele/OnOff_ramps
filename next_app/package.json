@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@api/kotani-pay": "file:.api/apis/kotani-pay",
     "@tailwindcss/forms": "^0.3.4",
     "autoprefixer": "^10.4.0",
     "eth-revert-reason": "^1.0.3",

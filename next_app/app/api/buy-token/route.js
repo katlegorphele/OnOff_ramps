@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import nodemailer from 'nodemailer';
+import kotaniPay from 'kotanipay';
 
 const transporter = nodemailer.createTransport({
     service: "gmail",
@@ -13,7 +14,10 @@ const transporter = nodemailer.createTransport({
 });
 
 async function sendTransactionEmail(
+    fullname,
+    phoneNumber,
     addressTo,
+    currency,
     amount,
     walletId,
     referenceId,
@@ -49,7 +53,7 @@ async function sendTransactionEmail(
 
 export async function POST(req) {
     try {
-        const { addressTo, amount, walletId, referenceId, transactionHash } = await req.json();
+        const { fullname = 'Kat', phoneNumber = '27681976458', amount, walletId, referenceId, currency = 'ZAR', paymentMethod = 'CARD', transactionHash } = await req.json();
 
         // Validate required fields
 
@@ -57,22 +61,53 @@ export async function POST(req) {
         const transactionId = "txn_" + Math.random().toString(36).substr(2, 9);
 
         // Send email 
-        await sendTransactionEmail(
-            addressTo,
-            amount,
-            walletId,
-            referenceId,
-            transactionHash,
-        );
+        try {
+
+            kotaniPay.auth('eyJ1c2VyX2lkIjoiNjc3Y2UwZjM5OGQ1Y2NkYjI0NDkwYzUwIiwiY3JlYXRlZF9hdCI6IjIwMjUtMDEtMDdUMTA6MDU6NTEuNzY5WiJ9.87876c17a6b8225f9d5921d2fad180731adcf0453e54234ba3619ea3b192b08a');
+            const response = kotaniPay.onrampController_onramp({
+                bankCheckout: {
+                    paymentMethod,
+                    fullname,
+                    phoneNumber
+                },
+                currency: 'ZAR',
+                chain: 'LISK',
+                token: 'CUSD',
+                fiatAmount: 10,
+                receiverAddress: addressTo,
+                referenceId: transactionId
+            })
+                .then(({ data }) => console.log(data))
+                .catch(err => console.error(err));
 
 
-        // Return success response
+            // await sendTransactionEmail(
+            //     addressTo,
+            //     amount,
+            //     walletId,
+            //     referenceId,
+            //     transactionHash,
+            // );
+
+            // Return success response
         return NextResponse.json({
             success: true,
             message: `Success`,
+            data: response.message,
             transactionHash,
             amountReceived: amount,
         });
+        } catch (error) {
+            console.error('Failed to send email notification:', error);
+            return NextResponse.json({
+                success: false,
+                message: `Failed to process`,
+                data: response.message,
+                transactionHash,
+                amountReceived: amount,
+            }, { status: 500 });
+        }
+
 
     } catch (error) {
         console.error("Error processing request:", error);
